@@ -64,6 +64,33 @@
 
 static m3_wasi_context_t* wasi_context;
 
+static FILE* override_stdin = NULL;
+static FILE* override_stdout = NULL;
+static FILE* override_stderr = NULL;
+
+static
+inline int overrideFd(int fd)
+{
+    switch(fd) {
+    case STDIN_FILENO:
+        if (override_stdin)
+            return fileno(override_stdin);
+        break;
+    case STDOUT_FILENO:
+        if (override_stdout)
+            return fileno(override_stdout);
+        break;
+    case STDERR_FILENO:
+        if (override_stderr)
+            return fileno(override_stderr);
+        break;
+    default:
+        break;
+    }
+
+    return fd;
+}
+
 typedef struct wasi_iovec_t
 {
     __wasi_size_t buf;
@@ -583,6 +610,8 @@ m3ApiRawFunction(m3_wasi_generic_fd_read)
         return mem_check;
     }
 
+    fd = overrideFd(fd);
+
     ssize_t ret = readv(fd, iovs, iovs_len);
     if (ret < 0) { m3ApiReturn(errno_to_wasi(errno)); }
     m3ApiWriteMem32(nread, ret);
@@ -621,6 +650,8 @@ m3ApiRawFunction(m3_wasi_generic_fd_write)
     if (mem_check != m3Err_none) {
         return mem_check;
     }
+
+    fd = overrideFd(fd);
 
     ssize_t ret = writev(fd, iovs, iovs_len);
     if (ret < 0) { m3ApiReturn(errno_to_wasi(errno)); }
@@ -868,6 +899,13 @@ _       (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "random_get", 
 
 _catch:
     return result;
+}
+
+void m3_SetStreams(FILE* stdin, FILE* stdout, FILE* stderr)
+{
+    override_stdin = stdin;
+    override_stdout = stdout;
+    override_stderr = stderr;
 }
 
 #endif // d_m3HasWASI

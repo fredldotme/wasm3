@@ -33,6 +33,8 @@ M3Result    m3_LinkWASIWithOptions  (IM3Module io_module, uvwasi_options_t uvwas
 
 m3_wasi_context_t* m3_GetWasiContext();
 
+void m3_SetStreams(FILE* stdin, FILE* stdout, FILE* stderr);
+
 d_m3EndExternC
 
 #endif // m3_api_wasi_h
